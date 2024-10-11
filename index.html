@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品価格入力（STEIN API使用、ページング付き）</title>
+    <style>
+        /* ヘッダーを固定 */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: white;
+            z-index: 200;
+            padding: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* テーブルの上に余白を作り、固定ヘッダーのスペースを確保 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+        }
+
+        /* テーブルヘッダーの固定 */
+        thead th {
+            position: sticky;
+            top: 0; /* スクロール時の固定位置 */
+            background-color: white;
+            z-index: 200;
+            box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        /* テーブルセルのスタイル */
+        th, td {
+            border: 0px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .price-input {
+            width: 100px;  /* 幅を変更 */
+            height: 40px;  /* 高さを追加して変更 */
+            font-size: 28px;  /* フォントサイズを変更 */
+            padding: 10px;  /* ボックス内の余白を調整 */
+        }
+
+        /* スクロール可能な親要素 */
+        .table-container {
+            overflow-x: auto; /* テーブル全体を横スクロール可能に */
+            max-height: 600px; /* 必要に応じて高さを制限 */
+            margin-top: 150px; /* 固定ヘッダーのスペース */
+        }
+
+        /* モバイル対応のためのレスポンシブデザイン */
+        @media only screen and (max-width: 600px) {
+            h1 {
+                font-size: 18px;
+            }
+            table, th, td {
+                font-size: 12px;
+                padding: 5px;
+            }
+            .price-input {
+                width: 80px;  /* スマホ用に幅を小さく */
+                height: 30px;  /* スマホ用に高さを小さく */
+                font-size: 16px;  /* フォントサイズを調整 */
+                padding: 5px;
+            }
+            .table-container {
+                overflow-x: auto; /* 横スクロールを許可 */
+            }
+            /* #saveButton, .pagination-button {
+                width: 100%;
+                padding: 12px;
+                margin-bottom: 10px;
+            } */
+        }
+    </style>
+</head>
+<body>
+    <!-- ヘッダーとボタン類を固定するための div -->
+    <div class="header">
+        <h1>商品価格入力（STEIN API使用、ページング付き）</h1>
+        <div id="pagination">
+            <button id="prevPage" class="pagination-button" disabled>前へ</button>
+            <button id="nextPage" class="pagination-button">次へ</button>
+            <button id="saveButton">スプレッドシートに保存</button>
+        </div>
+    </div>
+
+    <!-- スクロール可能なテーブルを囲む div -->
+    <div class="table-container">
+        <table id="priceTable">
+            <thead>
+                <tr>
+                    <th>JAN</th>
+                    <th>メーカー</th>
+                    <th>商品名</th>
+                    <th>規格</th>
+                    <th>A店価格</th>
+                    <th>B店価格</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- スプレッドシートのデータでここに行を追加します -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const steinUrl = 'https://api.steinhq.com/v1/storages/6709639b4d11fd04f0374a1b'; // 正しいSTEINのAPI URLを挿入
+        let currentPage = 1;
+        const rowsPerPage = 50; // 1ページに表示する行数
+        let data = []; // 全データを格納する変数
+
+        // ページに応じてシートを切り替えてデータを取得
+        function loadSheetData(page) {
+            let sheetName = '';
+            if (page <= 4) {
+                sheetName = 'Sheet1'; // ページ1〜4はSheet1から取得
+            } else {
+                sheetName = 'Sheet2'; // ページ5以降はSheet2から取得
+            }
+
+            fetch(`${steinUrl}/${sheetName}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(fetchedData => {
+                data = fetchedData; // 全データを保存
+                displayPage(page);
+            })
+            .catch(error => {
+                console.error('Error fetching data from spreadsheet', error);
+            });
+        }
+
+        // 指定されたページのデータを表示
+        function displayPage(page) {
+            const tbody = document.getElementById('priceTable').getElementsByTagName('tbody')[0];
+            tbody.innerHTML = ''; // テーブルを初期化
+
+            const start = (page - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const pageData = data.slice(start, end);
+
+            pageData.forEach(function(row) {
+                const tr = document.createElement('tr');
+                
+                tr.innerHTML += `<td>${row['JAN'] || ''}</td>`;
+                tr.innerHTML += `<td>${row['メーカー'] || ''}</td>`;
+                tr.innerHTML += `<td>${row['商品名'] || ''}</td>`;
+                tr.innerHTML += `<td>${row['規格'] || ''}</td>`;
+                tr.innerHTML += `<td><input type="number" class="price-input" min="0" step="1" value="${row['A店価格'] || ''}"></td>`;
+                tr.innerHTML += `<td><input type="number" class="price-input" min="0" step="1" value="${row['B店価格'] || ''}"></td>`;
+
+                tbody.appendChild(tr);
+            });
+
+            // ページングボタンの制御
+            document.getElementById('prevPage').disabled = page === 1;
+            document.getElementById('nextPage').disabled = (page > 4 && end >= data.length);
+        }
+
+        // スプレッドシートにデータを保存
+        function saveToSheet() {
+            let values = [];
+            const rows = document.getElementById('priceTable').getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                const janCode = cells[0].textContent;
+
+                // `PUT`リクエストのための条件と更新フィールドを指定
+                const requestBody = {
+                    condition: { "JAN": janCode }, // JANで行を検索
+                    set: {
+                        "A店価格": cells[4].getElementsByTagName('input')[0].value,
+                        "B店価格": cells[5].getElementsByTagName('input')[0].value
+                    }
+                };
+
+                let sheetName = '';
+                if (currentPage <= 4) {
+                    sheetName = 'Sheet1'; // 1〜4ページはSheet1に保存
+                } else {
+                    sheetName = 'Sheet2'; // 5ページ以降はSheet2に保存
+                }
+
+                // 各行に対してAPIリクエストを送信
+                fetch(`${steinUrl}/${sheetName}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody),
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Data updated in spreadsheet:', data);
+                })
+                .catch((error) => {
+                    console.error('Error updating data in spreadsheet:', error);
+                });
+            }
+
+            alert('データがスプレッドシートに保存されました。');
+        }
+
+        // ページ変更時の処理
+        document.getElementById('prevPage').addEventListener('click', function() {
+            if (currentPage > 1) {
+                currentPage--;
+                loadSheetData(currentPage);
+            }
+        });
+
+        document.getElementById('nextPage').addEventListener('click', function() {
+            if (currentPage < 8) { // 合計8ページ（4ページごとに1つのシート）
+                currentPage++;
+                loadSheetData(currentPage);
+            }
+        });
+
+        document.getElementById('saveButton').addEventListener('click', saveToSheet);
+
+        // ページ読み込み時にデータを読み込む
+        window.onload = function() {
+            loadSheetData(currentPage);
+        };
+    </script>
+</body>
+</html>
