@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Futuristic 3D Website</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            color: #fff;
+            background: #000;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            z-index: 100;
+            display: block;
+        }
+        #menu {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            z-index: 100;
+        }
+        .menu-item {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 0 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .menu-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+ 
+            /* ポップアップのベーススタイル */
+    #popup-container {
+        display: none; /* 初期状態では非表示 */
+        position: fixed; /* 画面に固定表示 */
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.3); /* 半透明の黒い背景 */
+        z-index: 101; /* ポップアップが他の要素の上に表示されるように */
+        justify-content: center;
+        align-items: center;
+        opacity: 0; /* 初期状態の透明度を0に設定 */
+        transform: scale(0.8); /* ポップアップが小さく縮んだ状態から始める */
+    transition: opacity 0.5s ease, transform 0.5s ease; /* 透明度と拡大を0.5秒かけてアニメーション */
+ 
+    }
+ 
+    /* ポップアップが表示されるときのスタイル */
+#popup-container.show {
+    display: flex; /* 表示される際はflexに設定 */
+    opacity: 1; /* 完全に表示 */
+    transform: scale(1); /* 元のサイズに戻る */
+}
+ 
+    .popup {
+        background-color: rgba(255, 255, 255, 0.6); /* 背景色を白（255,255,255）で80%不透明に設定 */
+        color: #000; /* ポップアップウィンドウ内のテキスト色 */
+        padding: 20px;
+        border-radius: 10px;
+        width: 80%; /* ウィンドウ幅の80%に設定 */
+        max-width: 600px; /* 最大幅600px */
+        position: relative;
+    }
+ 
+    .close-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+ 
+    .close-btn:hover {
+        color: red;
+    }
+    </style>
+</head>
+<body>
+ 
+    <div id="popup-container">
+        <div class="popup">
+            <span class="close-btn">&times;</span>
+            <div id="popup-content">Content goes here...</div>
+        </div>
+    </div>
+   
+    <div id="info">Precision Field Operations<br>Watch the breathing sprites</div>
+    <div id="menu">
+        <div class="menu-item">Home</div>
+        <div class="menu-item">About</div>
+        <div class="menu-item">Contact</div>
+    </div>
+ 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+ 
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 1);
+        pointLight.position.set(5, 5, 5);
+        scene.add(pointLight);
+ 
+        // Sprites
+        const spriteCount = 2000;
+        const spriteMaterial = new THREE.PointsMaterial({
+            color: 0x00ffff,
+            size: 0.05,
+            blending: THREE.AdditiveBlending,
+            transparent: true
+        });
+ 
+        const spriteGeometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(spriteCount * 3);
+        const originalPositions = new Float32Array(spriteCount * 3);
+ 
+        for (let i = 0; i < spriteCount * 3; i += 3) {
+            const x = (Math.random() - 0.5) * 10;
+            const y = (Math.random() - 0.5) * 10;
+            const z = (Math.random() - 0.5) * 10;
+            positions[i] = x;
+            positions[i + 1] = y;
+            positions[i + 2] = z;
+            originalPositions[i] = x;
+            originalPositions[i + 1] = y;
+            originalPositions[i + 2] = z;
+        }
+ 
+        spriteGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const points = new THREE.Points(spriteGeometry, spriteMaterial);
+        scene.add(points);
+ 
+        // Torus
+        const torusGeometry = new THREE.TorusGeometry(1, 0.3, 16, 100);
+        const torusMaterial = new THREE.MeshPhongMaterial({
+            color: 0xff00ff,
+            wireframe: true
+        });
+        const torus = new THREE.Mesh(torusGeometry, torusMaterial);
+        scene.add(torus);
+ 
+        camera.position.z = 5;
+ 
+        // Breathing animation
+        let time = 0;
+        const breathingSpeed = 0.0005;
+        const breathingIntensity = 0.3;
+ 
+        let initialHue = Math.random(); // 0から1の範囲でランダムな値を生成
+ 
+        // Animation
+        function animate() {
+            requestAnimationFrame(animate);
+ 
+            time += breathingSpeed;
+            const breathingFactor = Math.sin(time) * breathingIntensity + 1;
+ 
+            torus.rotation.x += 0.001;
+            torus.rotation.y += 0.002;
+ 
+            // Update sprites
+            const positions = points.geometry.attributes.position.array;
+            for (let i = 0; i < positions.length; i += 3) {
+                const originalX = originalPositions[i];
+                const originalY = originalPositions[i+1];
+                const originalZ = originalPositions[i+2];
+ 
+                positions[i] = originalX * breathingFactor;
+                positions[i+1] = originalY * breathingFactor;
+                positions[i+2] = originalZ * breathingFactor;
+            }
+            points.geometry.attributes.position.needsUpdate = true;
+ 
+    // スプライトの色を時間経過で変化させる
+    const hue = (initialHue + time * 10 % 360 / 360) % 1;  // ランダムな初期値に基づいて色相を変化させる
+    spriteMaterial.color.setHSL(hue, 1, 0.5);  // HSLモデルで色を設定
+ 
+            renderer.render(scene, camera);
+        }
+ 
+        animate();
+ 
+        // Responsive design
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+ 
+        // Interactive elements
+        const menuItems = document.querySelectorAll('.menu-item');
+        menuItems.forEach(item => {
+            item.addEventListener('mouseover', () => {
+                torus.material.color.setHex(Math.random() * 0xffffff);
+            });
+        });
+ 
+ 
+       
+        // ポップアップの要素を取得
+        const popupContainer = document.getElementById('popup-container');
+        const popupContent = document.getElementById('popup-content');
+        const closeBtn = document.querySelector('.close-btn');
+ 
+        // メニューアイテムのクリックイベント
+ 
+        menuItems.forEach(item => {
+    item.addEventListener('click', (event) => {
+        const itemText = event.target.textContent;
+        // 各ボタンのテキストに応じた内容を表示
+        if (itemText === 'Home') {
+            popupContent.innerHTML = '<h2>Home</h2><p>Welcome to the futuristic 3D website!</p>';
+        } else if (itemText === 'About') {
+            popupContent.innerHTML = '<h2>About</h2><p>This site showcases futuristic 3D animations using Three.js.</p>';
+        } else if (itemText === 'Contact') {
+            popupContent.innerHTML = '<h2>Contact</h2><p>Feel free to reach out via our futuristic contact form.</p>';
+        }
+        // ポップアップを表示する関数を呼び出す
+        showPopup(); // ここでshowPopupを呼び出してアニメーションとともに表示
+    });
+});
+
+        // 閉じるボタンのクリックイベント
+        closeBtn.addEventListener('click', () => {
+            popupContainer.style.display = 'none'; // ポップアップを非表示
+        });
+ 
+        // ポップアップを外側クリックで閉じる
+        popupContainer.addEventListener('click', (event) => {
+            if (event.target === popupContainer) {
+                popupContainer.style.display = 'none'; // ポップアップを非表示
+            }
+        });
+ 
+// ポップアップを表示する関数
+function showPopup() {
+    popupContainer.style.display = 'flex'; // 最初に表示をflexに設定
+    setTimeout(() => {
+        popupContainer.classList.add('show'); // 少し遅れてアニメーションを開始
+    }, 10); // 短い遅延でアニメーションが確実に適用されるように
+}
+ 
+// ポップアップを閉じる関数
+function hidePopup() {
+    popupContainer.classList.remove('show'); // アニメーションを開始
+    setTimeout(() => {
+        popupContainer.style.display = 'none'; // アニメーションが完了してから非表示にする
+    }, 500); // transitionと同じ0.5秒後にdisplayをnoneに
+}
+ 
+// 閉じるボタンのクリックイベント
+closeBtn.addEventListener('click', hidePopup);
+ 
+    </script>
+</body>
+</html>
+ 
